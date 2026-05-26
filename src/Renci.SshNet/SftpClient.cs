@@ -783,6 +783,77 @@ namespace Renci.SshNet
         }
 
         /// <summary>
+        /// Gets reference to remote symbolic link.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <returns>
+        /// A reference to <see cref="ISftpFile"/> file object.
+        /// </returns>
+        /// <exception cref="SshConnectionException">Client is not connected.</exception>
+        /// <exception cref="SftpPathNotFoundException"><paramref name="path"/> was not found on the remote host.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="path" /> is <b>null</b>.</exception>
+        /// <exception cref="ObjectDisposedException">The method was called after the client was disposed.</exception>
+        public ISftpFile GetSymbolicLink(string path)
+        {
+            CheckDisposed();
+
+            if (path is null)
+            {
+                throw new ArgumentNullException(nameof(path));
+            }
+
+            if (_sftpSession is null)
+            {
+                throw new SshConnectionException("Client not connected.");
+            }
+
+            var fullPath = _sftpSession.GetCanonicalPath(path, getRealPath: true);
+
+            var attributes = _sftpSession.RequestLStat(fullPath);
+
+            return new SftpFile(_sftpSession, fullPath, attributes);
+        }
+
+        /// <summary>
+        /// Checks whether symbolic link exists.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <returns>
+        /// true if directory or file exists; otherwise false.
+        /// </returns>
+        /// <exception cref="ArgumentException"><paramref name="path"/> is <b>null</b> or contains only whitespace characters.</exception>
+        /// <exception cref="SshConnectionException">Client is not connected.</exception>
+        /// <exception cref="SftpPermissionDeniedException">Permission to perform the operation was denied by the remote host. <para>-or-</para> A SSH command was denied by the server.</exception>
+        /// <exception cref="SshException">A SSH error where <see cref="Exception.Message"/> is the message from the remote host.</exception>
+        /// <exception cref="ObjectDisposedException">The method was called after the client was disposed.</exception>
+        public bool SymbolicLinkExists(string path)
+        {
+            CheckDisposed();
+
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                throw new ArgumentException("path");
+            }
+
+            if (_sftpSession is null)
+            {
+                throw new SshConnectionException("Client not connected.");
+            }
+
+            var fullPath = _sftpSession.GetCanonicalPath(path, getRealPath: true);
+
+            try
+            {
+                _ = _sftpSession.RequestLStat(fullPath);
+                return true;
+            }
+            catch (SftpPathNotFoundException)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Checks whether file or directory exists.
         /// </summary>
         /// <param name="path">The path.</param>
