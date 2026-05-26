@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Renci.SshNet.Abstractions;
 using Renci.SshNet.Channels;
 using Renci.SshNet.Common;
+using Renci.SshNet.Messages.Connection;
 
 namespace Renci.SshNet
 {
@@ -66,6 +67,11 @@ namespace Renci.SshNet
                 }
             }
         }
+
+        /// <summary>
+        /// Gets ExitStatus.
+        /// </summary>
+        public int ExitStatus { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ShellStream"/> class.
@@ -160,6 +166,7 @@ namespace Renci.SshNet
 
             _channel = _session.CreateChannelSession();
             _channel.DataReceived += Channel_DataReceived;
+            _channel.RequestReceived += Channel_RequestReceived;
             _channel.Closed += Channel_Closed;
             _session.Disconnected += Session_Disconnected;
             _session.ErrorOccured += Session_ErrorOccurred;
@@ -982,6 +989,7 @@ namespace Renci.SshNet
 
                 // But we do own _channel
                 _channel.DataReceived -= Channel_DataReceived;
+                _channel.RequestReceived -= Channel_RequestReceived;
                 _channel.Closed -= Channel_Closed;
                 _channel.Dispose();
 
@@ -1026,6 +1034,14 @@ namespace Renci.SshNet
             }
 
             DataReceived?.Invoke(this, new ShellDataEventArgs(e.Data.ToArray()));
+        }
+
+        private void Channel_RequestReceived(object? sender, ChannelRequestEventArgs e)
+        {
+            if (e.Info is ExitStatusRequestInfo exitStatusInfo)
+            {
+                ExitStatus = (int)exitStatusInfo.ExitStatus;
+            }
         }
     }
 }
